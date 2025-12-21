@@ -5,7 +5,7 @@ services:
     image: postgres:15
     container_name: postgres-distribution-orchestrator
     ports:
-      - "5434:5432" # <-- porta externa (você pode trocar)
+      - "5434:5432"
     environment:
       POSTGRES_USER: orchestrator
       POSTGRES_PASSWORD: orchestrator
