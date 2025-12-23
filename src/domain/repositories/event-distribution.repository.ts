@@ -1,12 +1,15 @@
-import { EntityId } from '../common/entity-id';
 import { EventDistribution } from '../distribution/entities/event-distribution';
+import { EntityId } from '../common/entity-id';
+import { EventId } from '../distribution/value-objects/event-id';
 
-export interface EventDistributionRepository {
-  save(item: EventDistribution): Promise<void>;
+export abstract class EventDistributionRepository {
+  abstract save(item: EventDistribution): Promise<void>;
 
-  saveMany(items: EventDistribution[]): Promise<void>;
+  abstract saveMany(items: EventDistribution[]): Promise<void>;
 
-  findByRunId(runId: EntityId): Promise<EventDistribution[]>;
+  abstract findByRunId(runId: EntityId): Promise<EventDistribution[]>;
 
-  findFailedByRunId(runId: EntityId): Promise<EventDistribution[]>;
+  abstract findFailedByRunId(runId: EntityId): Promise<EventDistribution[]>;
+
+  abstract findEligibleByEvent(eventId: EventId): Promise<EventDistribution[]>;
 }

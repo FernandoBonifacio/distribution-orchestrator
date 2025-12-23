@@ -6,7 +6,6 @@ import { EventId } from '../value-objects/event-id';
 
 export class DistributionRun {
   private status: DistributionRunStatus;
-  private readonly createdAt: Date;
   private startedAt?: Date;
   private finishedAt?: Date;
 
@@ -19,13 +18,45 @@ export class DistributionRun {
     private readonly id: EntityId,
     private readonly tenantId: TenantId,
     private readonly eventId: EventId,
+    private readonly createdAt: Date,
   ) {
     this.status = DistributionRunStatus.CREATED;
-    this.createdAt = new Date();
   }
 
   static create(params: { tenantId: TenantId; eventId: EventId }): DistributionRun {
-    return new DistributionRun(EntityId.create(), params.tenantId, params.eventId);
+    return new DistributionRun(EntityId.create(), params.tenantId, params.eventId, new Date());
+  }
+
+  static rehydrate(params: {
+    id: string;
+    tenantId: string;
+    eventId: string;
+    status: DistributionRunStatus;
+    createdAt: Date;
+    startedAt?: Date;
+    finishedAt?: Date;
+    totalFound: number;
+    totalEligible: number;
+    totalDistributed: number;
+    totalFailed: number;
+  }): DistributionRun {
+    const run = new DistributionRun(
+      EntityId.create(params.id),
+      TenantId.create(params.tenantId),
+      EventId.create(params.eventId),
+      params.createdAt,
+    );
+
+    run.status = params.status;
+    run.startedAt = params.startedAt;
+    run.finishedAt = params.finishedAt;
+
+    run.totalFound = params.totalFound;
+    run.totalEligible = params.totalEligible;
+    run.totalDistributed = params.totalDistributed;
+    run.totalFailed = params.totalFailed;
+
+    return run;
   }
 
   start(totalFound: number, totalEligible: number): void {

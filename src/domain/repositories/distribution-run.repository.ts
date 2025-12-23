@@ -1,11 +1,11 @@
-import { EntityId } from '../common/entity-id';
 import { DistributionRun } from '../distribution/entities/distribution-run';
+import { EntityId } from '../common/entity-id';
 import { EventId } from '../distribution/value-objects/event-id';
 
-export interface DistributionRunRepository {
-  save(run: DistributionRun): Promise<void>;
+export abstract class DistributionRunRepository {
+  abstract save(run: DistributionRun): Promise<void>;
 
-  findById(id: EntityId): Promise<DistributionRun | null>;
+  abstract findById(id: EntityId): Promise<DistributionRun | null>;
 
-  findActiveByEvent(eventId: EventId): Promise<DistributionRun | null>;
+  abstract findActiveByEvent(eventId: EventId): Promise<DistributionRun | null>;
 }
