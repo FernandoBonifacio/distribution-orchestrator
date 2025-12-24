@@ -38,7 +38,7 @@ export class StartDistributionUseCase {
     for (const item of items) {
       await this.eventRepo.save(item);
 
-      await this.producer.publish('distribution.queue', {
+      await this.producer.publish('distribution.run', {
         runId: run.getId().toString(),
         eventId: eventId.toString(),
         document: item.getDocument(),

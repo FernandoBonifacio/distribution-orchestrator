@@ -1,42 +1,65 @@
-import amqp, { Channel, Connection, ConsumeMessage } from 'amqplib';
-import { ProcessDistributionItemUseCase } from 'src/application/use-cases/process-distribution-item.use-case';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { ConsumeMessage } from 'amqplib';
+import { RabbitMQConnection } from './rabbitmq.connection';
+import { RabbitMQProducer } from './rabbitmq.producer';
+import { RabbitMQTopology } from './rabbitmq.topology';
 
-export class RabbitMQConsumer {
-  private connection!: Connection;
-  private channel!: Channel;
+const MAX_RETRIES = 5;
 
-  constructor(private readonly processItemUseCase: ProcessDistributionItemUseCase) {}
+@Injectable()
+export class RabbitMQConsumer implements OnModuleInit {
+  constructor(
+    private readonly conn: RabbitMQConnection,
+    private readonly producer: RabbitMQProducer,
+    private readonly topology: RabbitMQTopology,
+    private readonly logger = new Logger(RabbitMQConsumer.name),
+  ) {}
 
-  async connect(): Promise<void> {
-    this.connection = await amqp.connect(process.env.RABBITMQ_URL!);
-    this.channel = await this.connection.createChannel();
+  async onModuleInit() {
+    await this.topology.setup();
 
-    await this.channel.assertQueue('distribution.queue', {
-      durable: true,
-    });
-  }
+    const ch = await this.conn.getChannel();
 
-  async consume(): Promise<void> {
-    await this.channel.consume('distribution.queue', async (msg: ConsumeMessage | null) => {
+    ch.prefetch(10);
+
+    await ch.consume('distribution.queue', async (msg) => {
       if (!msg) return;
 
       try {
         const payload = JSON.parse(msg.content.toString());
+        this.logger.log(`Processing message`, payload);
+        ch.ack(msg);
+      } catch (err) {
+        this.logger.error('Error processing message', err instanceof Error ? err.stack : undefined);
 
-        await this.processItemUseCase.execute({
-          runId: payload.runId,
-          eventId: payload.eventId,
-          document: payload.document,
-          userId: payload.userId,
-          biometricId: payload.biometricId,
-          success: true,
-        });
-
-        this.channel.ack(msg);
-      } catch (error) {
-        console.error('Error processing distribution item :(', error);
-        this.channel.nack(msg, false, false);
+        await this.handleFail(msg, 'processing_error');
+        ch.ack(msg);
       }
+    });
+  }
+
+  private async handleFail(msg: ConsumeMessage, errorMessage: string) {
+    const headers = msg.properties.headers ?? {};
+    const retryCount = Number(headers['x-retry-count'] ?? 0);
+    const payload = JSON.parse(msg.content.toString());
+
+    if (retryCount >= MAX_RETRIES) {
+      // manda pra DLQ
+      await this.producer.publish(
+        'distribution.dlq',
+        { ...payload, errorMessage, failedAt: new Date().toISOString() },
+        { 'x-final-failure': true, 'x-retry-count': retryCount },
+      );
+      return;
+    }
+
+    // manda pra RETRY (TTL 10s) e volta pra principal depois
+    const nextRetry = retryCount + 1;
+    const ch = await this.conn.getChannel();
+    ch.sendToQueue('distribution.retry.10s', Buffer.from(JSON.stringify(payload)), {
+      persistent: true,
+      contentType: 'application/json',
+      headers: { ...headers, 'x-retry-count': nextRetry, 'x-error': errorMessage },
     });
   }
 }

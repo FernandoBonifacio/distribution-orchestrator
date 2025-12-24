@@ -1,17 +1,27 @@
-import * as amqp from 'amqplib';
+import { Injectable } from '@nestjs/common';
+import { RabbitMQConnection } from './rabbitmq.connection';
 
+type RabbitMQHeaders = Record<string, unknown>;
+
+@Injectable()
 export class RabbitMQProducer {
-  private connection: amqp.Connection;
-  private channel: amqp.channel;
+  constructor(private readonly conn: RabbitMQConnection) {}
 
   async connect(): Promise<void> {
-    this.connection = await amqp.conncet(process.env.RABBITMQ_URL);
-    this.channel = await this.connection.createChannel();
+    await this.conn.getChannel();
   }
 
-  async publish(queue: string, message: object): Promise<void> {
-    await this.channel.assertQueue(queue, { durable: true });
+  async publish<TPayload extends object>(
+    routingKey: string,
+    payload: TPayload,
+    headers?: RabbitMQHeaders,
+  ): Promise<void> {
+    const ch = await this.conn.getChannel();
 
-    this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), { persistent: true });
+    ch.publish('distribution.exchange', routingKey, Buffer.from(JSON.stringify(payload)), {
+      persistent: true,
+      contentType: 'application/json',
+      headers: headers ?? {},
+    });
   }
 }
