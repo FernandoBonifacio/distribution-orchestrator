@@ -1,35 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RabbitMQConnection } from './rabbitmq.connection';
 
 @Injectable()
 export class RabbitMQTopology {
+  private readonly logger = new Logger(RabbitMQTopology.name);
+
+  static QUEUE = 'distribution.queue';
+  static DLX = 'distribution.dlx';
+  static DLQ = 'distribution.dlq';
+  static DLQ_ROUTING_KEY = 'distribution.dlq';
+
   constructor(private readonly conn: RabbitMQConnection) {}
 
   async setup(): Promise<void> {
-    const ch = await this.conn.getChannel();
+    const channel = await this.conn.getChannel();
 
-    // Exchanges
-    await ch.assertExchange('distribution.exchange', 'direct', { durable: true });
-    await ch.assertExchange('distribution.dlx', 'direct', { durable: true });
+    // DLX
+    await channel.assertExchange(RabbitMQTopology.DLX, 'direct', { durable: true });
 
-    // MAIN QUEUE (dead-letter -> DLX)
-    await ch.assertQueue('distribution.queue', {
+    // queue principal com dead-letter
+    await channel.assertQueue(RabbitMQTopology.QUEUE, {
       durable: true,
-      deadLetterExchange: 'distribution.dlx',
-      deadLetterRoutingKey: 'distribution.dlq',
-    });
-    await ch.bindQueue('distribution.queue', 'distribution.exchange', 'distribution.run');
-
-    // RETRY QUEUE (TTL -> volta pra MAIN)
-    await ch.assertQueue('distribution.retry.10s', {
-      durable: true,
-      messageTtl: 10_000,
-      deadLetterExchange: 'distribution.exchange',
-      deadLetterRoutingKey: 'distribution.run',
+      arguments: {
+        'x-dead-letter-exchange': RabbitMQTopology.DLX,
+        'x-dead-letter-routing-key': RabbitMQTopology.DLQ_ROUTING_KEY,
+      },
     });
 
     // DLQ
-    await ch.assertQueue('distribution.dlq', { durable: true });
-    await ch.bindQueue('distribution.dlq', 'distribution.dlx', 'distribution.dlq');
+    await channel.assertQueue(RabbitMQTopology.DLQ, { durable: true });
+    await channel.bindQueue(
+      RabbitMQTopology.DLQ,
+      RabbitMQTopology.DLX,
+      RabbitMQTopology.DLQ_ROUTING_KEY,
+    );
+
+    // (opcional) QoS
+    await channel.prefetch(10);
+
+    this.logger.log(`Topology ready: ${RabbitMQTopology.QUEUE} + DLQ ${RabbitMQTopology.DLQ}`);
   }
 }

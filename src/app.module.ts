@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { RabbitMQModule } from './infrastructure/messaging/rabbitmq/rabbitmq.module';
+import { ApplicationModule } from './application/application.module';
 
 @Module({
   imports: [
@@ -27,6 +28,9 @@ import { RabbitMQModule } from './infrastructure/messaging/rabbitmq/rabbitmq.mod
 
     DatabaseModule,
     RabbitMQModule,
+    ApplicationModule,
+    RabbitMQModule,
+    DatabaseModule,
   ],
 })
 export class AppModule {}

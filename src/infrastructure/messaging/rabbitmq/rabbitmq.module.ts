@@ -1,17 +1,14 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { ApplicationModule } from '../../../application/application.module';
+
 import { RabbitMQConnection } from './rabbitmq.connection';
-import { RabbitMQProducer } from './rabbitmq.producer';
 import { RabbitMQTopology } from './rabbitmq.topology';
+import { RabbitMQProducer } from './rabbitmq.producer';
 import { RabbitMQConsumer } from './rabbitmq.consumer';
 
 @Module({
-  providers: [RabbitMQConnection, RabbitMQProducer, RabbitMQTopology, RabbitMQConsumer],
-  exports: [RabbitMQProducer, RabbitMQConnection],
+  imports: [ApplicationModule],
+  providers: [RabbitMQConnection, RabbitMQTopology, RabbitMQProducer, RabbitMQConsumer],
+  exports: [RabbitMQProducer],
 })
-export class RabbitMQModule implements OnModuleInit {
-  constructor(private readonly topology: RabbitMQTopology) {}
-
-  async onModuleInit() {
-    await this.topology.setup();
-  }
-}
+export class RabbitMQModule {}
