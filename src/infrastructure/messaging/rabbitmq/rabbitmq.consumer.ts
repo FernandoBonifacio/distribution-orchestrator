@@ -1,54 +1,43 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConsumeMessage } from 'amqplib';
 import { RabbitMQConnection } from './rabbitmq.connection';
-import { RabbitMQTopology } from './rabbitmq.topology';
 import { ProcessDistributionItemUseCase } from 'src/application/use-cases/process-distribution-item.use-case';
 
 @Injectable()
-export class RabbitMQConsumer implements OnModuleInit {
+export class RabbitMQConsumer {
   private readonly logger = new Logger(RabbitMQConsumer.name);
 
   constructor(
-    private readonly conn: RabbitMQConnection,
-    private readonly topology: RabbitMQTopology,
+    private readonly connection: RabbitMQConnection,
     private readonly processUseCase: ProcessDistributionItemUseCase,
   ) {}
 
-  async onModuleInit(): Promise<void> {
-    await this.topology.setup();
+  async start(): Promise<void> {
+    const channel = await this.connection.getChannel();
 
-    const channel = await this.conn.getChannel();
+    await channel.consume('distribution.queue', async (msg: ConsumeMessage | null) => {
+      if (!msg) return;
 
-    await channel.consume(
-      RabbitMQTopology.QUEUE,
-      async (msg) => {
-        if (!msg) return;
+      const payload = JSON.parse(msg.content.toString());
 
-        try {
-          const payload = JSON.parse(msg.content.toString());
+      try {
+        await this.processUseCase.execute({
+          runId: payload.runId,
+          eventId: payload.eventId,
+          document: payload.document,
+          userId: payload.userId,
+          biometricId: payload.biometricId,
+        });
 
-          await this.processUseCase.execute({
-            runId: payload.runId,
-            eventId: payload.eventId,
-            document: payload.document,
-            userId: payload.userId,
-            biometricId: payload.biometricId,
-            success: true, // depois vamos tornar isso real
-          });
+        channel.ack(msg);
+      } catch (error) {
+        this.logger.error('Erro ao processar item', error);
 
-          channel.ack(msg);
-        } catch (err: unknown) {
-          if (err instanceof Error) {
-            this.logger.error('Failed processing message -> sending to DLQ', err.stack);
-          } else {
-            this.logger.error('Failed processing message -> sending to DLQ', JSON.stringify(err));
-          }
+        //não requeue → vai para DLQ
+        channel.nack(msg, false, false);
+      }
+    });
 
-          channel.nack(msg, false, false); // rejeita e manda para DLQ
-        }
-      },
-      { noAck: false },
-    );
-
-    this.logger.log(`RabbitMQ Consumer listening on ${RabbitMQTopology.QUEUE}`);
+    this.logger.log('RabbitMQ Consumer listening on distribution.queue');
   }
 }
