@@ -9,9 +9,18 @@ import { TypeOrmEventDistributionRepository } from './typeorm/repositories/typeo
 
 import { DistributionRunOrmEntity } from './typeorm/entities/distribution-run.orm-entity';
 import { EventDistributionOrmEntity } from './typeorm/entities/event-distribution.orm-entity';
+import { DistributionRunMinuteOrmEntity } from './typeorm/entities/distribution-run-minute.orm-entity';
+import { DistributionRunMinuteRepository } from 'src/domain/repositories/distribution-run-minute.repository';
+import { TypeOrmDistributionRunMinuteRepository } from './typeorm/repositories/typeorm-distribution-run-minute.repository';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DistributionRunOrmEntity, EventDistributionOrmEntity])],
+  imports: [
+    TypeOrmModule.forFeature([
+      DistributionRunOrmEntity,
+      EventDistributionOrmEntity,
+      DistributionRunMinuteOrmEntity,
+    ]),
+  ],
   providers: [
     {
       provide: DistributionRunRepository,
@@ -20,6 +29,10 @@ import { EventDistributionOrmEntity } from './typeorm/entities/event-distributio
     {
       provide: EventDistributionRepository,
       useClass: TypeOrmEventDistributionRepository,
+    },
+    {
+      provide: DistributionRunMinuteRepository,
+      useClass: TypeOrmDistributionRunMinuteRepository,
     },
   ],
   exports: [DistributionRunRepository, EventDistributionRepository],
