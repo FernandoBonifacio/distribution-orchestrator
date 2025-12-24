@@ -1,30 +1,29 @@
-import { Column, CreateDateColumn, PrimaryColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, CreateDateColumn, Unique } from 'typeorm';
 
+@Entity({ name: 'distribution_run_minute' })
+@Unique(['distributionRunId', 'minute'])
 export class DistributionRunMinuteOrmEntity {
   @PrimaryColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column({ name: 'distribution_run_id', type: 'uuid' })
-  distributionRunId: string;
+  distributionRunId!: string;
 
-  @Column({ type: 'int' })
-  minute: number;
+  @Column({ type: 'timestamptz' })
+  minute!: Date;
 
-  @Column({ name: 'total_received', type: 'int', default: 0 })
-  totalReceived: number;
+  @Column({ type: 'int', default: 0 })
+  processed!: number;
 
-  @Column({ name: 'total_sucess', type: 'int', default: 0 })
-  totalSuccess: number;
+  @Column({ type: 'int', default: 0 })
+  distributed!: number;
 
-  @Column({ name: 'total_failed', type: 'int', default: 0 })
-  totalFailed: number;
+  @Column({ type: 'int', default: 0 })
+  failed!: number;
 
-  @Column({ name: 'start_failed', type: 'int' })
-  startedAt: Date;
+  @Column({ type: 'int', default: 0 })
+  duplicated!: number;
 
-  @Column({ name: 'finished_at', type: 'timestamp', nullable: true })
-  finishedAt?: Date;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt!: Date;
 }

@@ -1,25 +1,27 @@
 import { DistributionRun } from 'src/domain/distribution/entities/distribution-run';
-import { DistributionRunOrmEntity } from '../entities/distribution-run.orm-entity';
 import { DistributionRunStatus } from 'src/domain/distribution/enums/distribution-run-status';
+import { DistributionRunOrmEntity } from '../entities/distribution-run.orm-entity';
 
 export class DistributionRunMapper {
   static toOrm(entity: DistributionRun): DistributionRunOrmEntity {
     const orm = new DistributionRunOrmEntity();
 
     orm.id = entity.getId().toString();
-    orm.tenantId = entity['tenantId'].toString();
-    orm.eventId = entity['eventId'].toString();
+    orm.tenantId = entity.getTenantId().toString();
+    orm.eventId = entity.getEventId().toString();
     orm.status = entity.getStatus();
 
     const metrics = entity.getMetrics();
     orm.totalFound = metrics.totalFound;
     orm.totalEligible = metrics.totalEligible;
+    orm.totalProcessed = metrics.totalProcessed;
     orm.totalDistributed = metrics.totalDistributed;
     orm.totalFailed = metrics.totalFailed;
+    orm.totalDuplicated = metrics.totalDuplicated;
 
-    orm.createdAt = entity['createdAt'];
-    orm.startedAt = entity['startedAt'];
-    orm.finishedAt = entity['finishedAt'];
+    orm.createdAt = entity.getCreatedAt();
+    orm.startedAt = entity.getStartedAt();
+    orm.finishedAt = entity.getFinishedAt();
 
     return orm;
   }
@@ -35,8 +37,10 @@ export class DistributionRunMapper {
       finishedAt: orm.finishedAt,
       totalFound: orm.totalFound,
       totalEligible: orm.totalEligible,
+      totalProcessed: orm.totalProcessed,
       totalDistributed: orm.totalDistributed,
       totalFailed: orm.totalFailed,
+      totalDuplicated: orm.totalDuplicated,
     });
   }
 }

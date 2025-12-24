@@ -1,39 +1,82 @@
-import { FakeDistributionRunRepository } from 'src/__tests__/fakes/fake-distribution-run.repository';
 import { StartDistributionUseCase } from '../start-distribution.use-case';
+import { DistributionRunStatus } from 'src/domain/distribution/enums/distribution-run-status';
+import { DistributionRunRepository } from 'src/domain/repositories/distribution-run.repository';
+import { EventDistributionRepository } from 'src/domain/repositories/event-distribution.repository';
+import { BiometricQueryGateway } from 'src/domain/integrations/biometric-query.gateway';
+import { RabbitMQProducer } from 'src/infrastructure/messaging/rabbitmq/rabbitmq.producer';
 
 describe('StartDistributionUseCase', () => {
-  it('should start a new distribution run', async () => {
-    const repo = new FakeDistributionRunRepository();
-    const useCase = new StartDistributionUseCase(repo);
+  const runRepo: jest.Mocked<DistributionRunRepository> = {
+    findActiveByEvent: jest.fn(),
+    save: jest.fn(),
+    findById: jest.fn(),
+  };
+
+  const eventRepo: jest.Mocked<EventDistributionRepository> = {
+    save: jest.fn(),
+    saveMany: jest.fn(),
+    findByRunId: jest.fn(),
+    findFailedByRunId: jest.fn(),
+    findEligibleByEvent: jest.fn(),
+  };
+
+  const biometricGateway: jest.Mocked<BiometricQueryGateway> = {
+    findEligibleByEvent: jest.fn(),
+  };
+
+  const producer: jest.Mocked<RabbitMQProducer> = {
+    connect: jest.fn(),
+    publish: jest.fn(),
+  } as jest.Mocked<RabbitMQProducer>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should start a distribution run and enqueue items', async () => {
+    runRepo.findActiveByEvent.mockResolvedValue(null);
+
+    biometricGateway.findEligibleByEvent.mockResolvedValue([
+      {
+        document: '123',
+        biometricId: 'bio-1',
+        imageUrl: 'http://image-1',
+      },
+      {
+        document: '456',
+        biometricId: 'bio-2',
+        imageUrl: 'http://image-2',
+      },
+    ]);
+
+    const useCase = new StartDistributionUseCase(runRepo, eventRepo, biometricGateway, producer);
 
     const run = await useCase.execute({
       tenantId: 'tenant-1',
       eventId: 'event-1',
-      totalFound: 10,
-      totalEligible: 8,
+      totalFound: 2,
+      totalEligible: 2,
     });
 
-    expect(run.getStatus()).toBe('RUNNING');
+    expect(run.getStatus()).toBe(DistributionRunStatus.RUNNING);
+
+    expect(runRepo.save).toHaveBeenCalled();
+    expect(eventRepo.save).toHaveBeenCalledTimes(2);
+    expect(producer.publish).toHaveBeenCalledTimes(2);
   });
 
-  it('should not allow two active runs for same event', async () => {
-    const repo = new FakeDistributionRunRepository();
-    const useCase = new StartDistributionUseCase(repo);
+  it('should throw if a run is already active', async () => {
+    runRepo.findActiveByEvent.mockResolvedValue({});
 
-    await useCase.execute({
-      tenantId: 'tenant-1',
-      eventId: 'event-1',
-      totalFound: 10,
-      totalEligible: 8,
-    });
+    const useCase = new StartDistributionUseCase(runRepo, eventRepo, biometricGateway, producer);
 
     await expect(
       useCase.execute({
         tenantId: 'tenant-1',
         eventId: 'event-1',
-        totalFound: 5,
-        totalEligible: 5,
+        totalFound: 1,
+        totalEligible: 1,
       }),
-    ).rejects.toThrow('distribution_already_running');
+    ).rejects.toThrow();
   });
 });

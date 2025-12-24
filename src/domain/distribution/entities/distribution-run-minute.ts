@@ -1,61 +1,78 @@
-import { EntityId } from 'src/domain/common/entity-id';
-import { assert } from 'src/domain/common/assert';
+import { EntityId } from '../../common/entity-id';
 
 export class DistributionRunMinute {
-  private totalReceived = 0;
-  private totalSuccess = 0;
-  private totalFailed = 0;
-  private finishedAt?: Date;
+  private processed = 0;
+  private distributed = 0;
+  private failed = 0;
+  private duplicated = 0;
 
   private constructor(
     private readonly id: EntityId,
     private readonly runId: EntityId,
-    private readonly minute: number,
-    private readonly startedAt: Date,
+    private readonly minute: Date,
   ) {}
 
-  static start(params: { runId: EntityId; minute: number }): DistributionRunMinute {
-    assert(params.minute >= 0, 'invalid_minute');
-
-    return new DistributionRunMinute(EntityId.create(), params.runId, params.minute, new Date());
+  static create(runId: EntityId, minute: Date): DistributionRunMinute {
+    return new DistributionRunMinute(EntityId.create(), runId, minute);
   }
 
   static rehydrate(params: {
     id: string;
     runId: string;
-    minute: number;
-    startedAt: Date;
-    totalReceived: number;
-    totalSuccess: number;
-    totalFailed: number;
-    finishedAt?: Date;
+    minute: Date;
+    processed: number;
+    distributed: number;
+    failed: number;
+    duplicated: number;
   }): DistributionRunMinute {
-    const minute = new DistributionRunMinute(
+    const m = new DistributionRunMinute(
       EntityId.create(params.id),
       EntityId.create(params.runId),
       params.minute,
-      params.startedAt,
     );
 
-    minute.totalReceived = params.totalReceived;
-    minute.totalSuccess = params.totalSuccess;
-    minute.totalFailed = params.totalFailed;
-    minute.finishedAt = params.finishedAt;
+    m.processed = params.processed;
+    m.distributed = params.distributed;
+    m.failed = params.failed;
+    m.duplicated = params.duplicated;
 
-    return minute;
+    return m;
   }
 
-  recordSuccess() {
-    this.totalReceived++;
-    this.totalSuccess++;
+  incrementProcessed(): void {
+    this.processed += 1;
   }
 
-  recordFailure() {
-    this.totalReceived++;
-    this.totalFailed++;
+  incrementDistributed(): void {
+    this.distributed += 1;
   }
 
-  finish() {
-    this.finishedAt = new Date();
+  incrementFailed(): void {
+    this.failed += 1;
+  }
+
+  incrementDuplicated(): void {
+    this.duplicated += 1;
+  }
+
+  getId(): EntityId {
+    return this.id;
+  }
+
+  getRunId(): EntityId {
+    return this.runId;
+  }
+
+  getMinute(): Date {
+    return this.minute;
+  }
+
+  getMetrics() {
+    return {
+      processed: this.processed,
+      distributed: this.distributed,
+      failed: this.failed,
+      duplicated: this.duplicated,
+    };
   }
 }

@@ -1,43 +1,37 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConsumeMessage } from 'amqplib';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RabbitMQConnection } from './rabbitmq.connection';
 import { ProcessDistributionItemUseCase } from 'src/application/use-cases/process-distribution-item.use-case';
 
 @Injectable()
-export class RabbitMQConsumer {
+export class RabbitMQConsumer implements OnModuleInit {
   private readonly logger = new Logger(RabbitMQConsumer.name);
 
   constructor(
-    private readonly connection: RabbitMQConnection,
+    private readonly conn: RabbitMQConnection,
     private readonly processUseCase: ProcessDistributionItemUseCase,
   ) {}
 
-  async start(): Promise<void> {
-    const channel = await this.connection.getChannel();
+  async onModuleInit() {
+    const channel = await this.conn.getChannel();
 
-    await channel.consume('distribution.queue', async (msg: ConsumeMessage | null) => {
+    await channel.consume('distribution.queue', async (msg) => {
       if (!msg) return;
 
       const payload = JSON.parse(msg.content.toString());
 
       try {
-        await this.processUseCase.execute({
-          runId: payload.runId,
-          eventId: payload.eventId,
-          document: payload.document,
-          userId: payload.userId,
-          biometricId: payload.biometricId,
-        });
-
+        await this.processUseCase.execute(payload);
         channel.ack(msg);
-      } catch (error) {
-        this.logger.error('Erro ao processar item', error);
-
-        //não requeue → vai para DLQ
-        channel.nack(msg, false, false);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          this.logger.error('distribution failed', error.stack);
+        } else {
+          this.logger.error('distribution failed', JSON.stringify(error));
+        }
+        channel.nack(msg, false, false); // DLQ
       }
     });
 
-    this.logger.log('RabbitMQ Consumer listening on distribution.queue');
+    this.logger.log('Consumer ativo em distribution.queue');
   }
 }

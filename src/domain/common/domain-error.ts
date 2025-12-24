@@ -1,6 +1,9 @@
 export class DomainError extends Error {
-  constructor(message: string) {
+  public readonly cause?: unknown;
+
+  constructor(message: string, cause?: unknown) {
     super(message);
     this.name = 'DomainError';
+    this.cause = cause;
   }
 }

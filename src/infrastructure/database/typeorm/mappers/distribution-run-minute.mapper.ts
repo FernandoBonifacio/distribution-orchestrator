@@ -5,16 +5,15 @@ export class DistributionRunMinuteMapper {
   static toOrm(entity: DistributionRunMinute): DistributionRunMinuteOrmEntity {
     const orm = new DistributionRunMinuteOrmEntity();
 
-    orm.id = entity['id'].toString();
-    orm.distributionRunId = entity['runId'].toString();
-    orm.minute = entity['minute'];
+    orm.id = entity.getId().toString();
+    orm.distributionRunId = entity.getRunId().toString();
+    orm.minute = entity.getMinute();
 
-    orm.totalReceived = entity['totalReceived'];
-    orm.totalSuccess = entity['totalSuccess'];
-    orm.totalFailed = entity['totalFailed'];
-
-    orm.startedAt = entity['startedAt'];
-    orm.finishedAt = entity['finishedAt'];
+    const metrics = entity.getMetrics();
+    orm.processed = metrics.processed;
+    orm.distributed = metrics.distributed;
+    orm.failed = metrics.failed;
+    orm.duplicated = metrics.duplicated;
 
     return orm;
   }
@@ -24,11 +23,10 @@ export class DistributionRunMinuteMapper {
       id: orm.id,
       runId: orm.distributionRunId,
       minute: orm.minute,
-      startedAt: orm.startedAt,
-      totalReceived: orm.totalReceived,
-      totalSuccess: orm.totalSuccess,
-      totalFailed: orm.totalFailed,
-      finishedAt: orm.finishedAt,
+      processed: orm.processed,
+      distributed: orm.distributed,
+      failed: orm.failed,
+      duplicated: orm.duplicated,
     });
   }
 }

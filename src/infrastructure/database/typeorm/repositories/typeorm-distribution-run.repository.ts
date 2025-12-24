@@ -6,9 +6,9 @@ import { DistributionRunRepository } from '../../../../domain/repositories/distr
 import { DistributionRun } from '../../../../domain/distribution/entities/distribution-run';
 import { EntityId } from '../../../../domain/common/entity-id';
 
-import { DistributionRunOrmEntity } from '../entities/distribution-run.orm-entity';
 import { DistributionRunMapper } from '../mappers/distribution-run.mapper';
 import { EventId } from 'src/domain/distribution/value-objects/event-id';
+import { DistributionRunOrmEntity } from '../entities/distribution-run.orm-entity';
 
 @Injectable()
 export class TypeOrmDistributionRunRepository implements DistributionRunRepository {

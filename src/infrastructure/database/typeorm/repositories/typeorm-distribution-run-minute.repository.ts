@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import { DistributionRunMinuteRepository } from 'src/domain/repositories/distribution-run-minute.repository';
 import { DistributionRunMinute } from 'src/domain/distribution/entities/distribution-run-minute';
 import { EntityId } from 'src/domain/common/entity-id';
 
 import { DistributionRunMinuteOrmEntity } from '../entities/distribution-run-minute.orm-entity';
-import { DistributionRunMinuteMapper } from '../mappers/istribution-run-minute.mapper';
+import { DistributionRunMinuteMapper } from '../mappers/distribution-run-minute.mapper';
 
 @Injectable()
 export class TypeOrmDistributionRunMinuteRepository implements DistributionRunMinuteRepository {
@@ -21,20 +21,18 @@ export class TypeOrmDistributionRunMinuteRepository implements DistributionRunMi
     await this.ormRepo.save(orm);
   }
 
-  async findOpenByRunAndMinute(
-    runId: EntityId,
-    minute: number,
-  ): Promise<DistributionRunMinute | null> {
+  async findOrCreate(runId: EntityId, minute: Date): Promise<DistributionRunMinute> {
     const orm = await this.ormRepo.findOne({
       where: {
         distributionRunId: runId.toString(),
         minute,
-        finishedAt: IsNull(),
       },
     });
 
-    if (!orm) return null;
+    if (orm) return DistributionRunMinuteMapper.toDomain(orm);
 
-    return DistributionRunMinuteMapper.toDomain(orm);
+    const created = DistributionRunMinute.create(runId, minute);
+    await this.save(created);
+    return created;
   }
 }

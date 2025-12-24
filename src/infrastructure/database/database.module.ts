@@ -1,17 +1,28 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { DistributionRunRepository } from '../../domain/repositories/distribution-run.repository';
-import { EventDistributionRepository } from '../../domain/repositories/event-distribution.repository';
+import { DistributionRunMinuteOrmEntity } from './typeorm/entities/distribution-run-minute.orm-entity';
+import { DistributionRunOrmEntity } from './typeorm/entities/distribution-run.orm-entity';
+import { SyncFinalRepository } from '../../domain/distribution/repositories/sync-final.repository';
 
 import { TypeOrmDistributionRunRepository } from './typeorm/repositories/typeorm-distribution-run.repository';
 import { TypeOrmEventDistributionRepository } from './typeorm/repositories/typeorm-event-distribution.repository';
+import { TypeOrmSyncFinalRepository } from './typeorm/repositories/typeorm-sync-final.repository';
 
-import { DistributionRunOrmEntity } from './typeorm/entities/distribution-run.orm-entity';
 import { EventDistributionOrmEntity } from './typeorm/entities/event-distribution.orm-entity';
+import { SyncFinalOrmEntity } from './typeorm/entities/sync-final.orm-entity';
+import { DistributionRunRepository } from 'src/domain/repositories/distribution-run.repository';
+import { EventDistributionRepository } from 'src/domain/repositories/event-distribution.repository';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DistributionRunOrmEntity, EventDistributionOrmEntity])],
+  imports: [
+    TypeOrmModule.forFeature([
+      DistributionRunOrmEntity,
+      DistributionRunMinuteOrmEntity,
+      EventDistributionOrmEntity,
+      SyncFinalOrmEntity,
+    ]),
+  ],
   providers: [
     {
       provide: DistributionRunRepository,
@@ -21,7 +32,11 @@ import { EventDistributionOrmEntity } from './typeorm/entities/event-distributio
       provide: EventDistributionRepository,
       useClass: TypeOrmEventDistributionRepository,
     },
+    {
+      provide: SyncFinalRepository,
+      useClass: TypeOrmSyncFinalRepository,
+    },
   ],
-  exports: [DistributionRunRepository, EventDistributionRepository],
+  exports: [DistributionRunRepository, EventDistributionRepository, SyncFinalRepository],
 })
 export class DatabaseModule {}

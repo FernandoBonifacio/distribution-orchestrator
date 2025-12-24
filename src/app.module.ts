@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { RabbitMQModule } from './infrastructure/messaging/rabbitmq/rabbitmq.module';
 import { ApplicationModule } from './application/application.module';
+import { BiometricModule } from './infrastructure/integrations/biometric/biometric.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ApplicationModule } from './application/application.module';
     ApplicationModule,
     RabbitMQModule,
     DatabaseModule,
+    BiometricModule,
   ],
 })
 export class AppModule {}
