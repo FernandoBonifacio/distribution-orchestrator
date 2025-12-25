@@ -6,32 +6,32 @@ export class EventDistributionOrmEntity {
   id!: string;
 
   @Index()
-  @Column({ name: 'distribution_run_id' })
+  @Column({ name: 'distribution_run_id', type: 'uuid' })
   distributionRunId!: string;
 
   @Index()
-  @Column()
-  document!: string;
+  @Column({ type: 'varchar' })
+  document!: string; // CPF OK
 
-  @Column({ name: 'user_id' })
-  userId!: string;
+  @Column({ name: 'userId', type: 'uuid' })
+  userId!: string; // UUID DO USER
 
-  @Column({ name: 'event_id' })
-  eventId: string;
+  @Column({ name: 'event_id', type: 'uuid' })
+  eventId!: string;
 
-  @Column({ name: 'biometric_id' })
+  @Column({ name: 'biometric_id', type: 'uuid' })
   biometricId!: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   status!: string;
 
-  @Column({ name: 'error_message', nullable: true })
+  @Column({ name: 'error_message', type: 'varchar', nullable: true })
   errorMessage?: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
-  @Column({ name: 'processed_at', nullable: true })
+  @Column({ name: 'processed_at', type: 'timestamptz', nullable: true })
   processedAt?: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })

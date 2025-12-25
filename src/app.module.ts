@@ -6,12 +6,11 @@ import { DatabaseModule } from './infrastructure/database/database.module';
 import { RabbitMQModule } from './infrastructure/messaging/rabbitmq/rabbitmq.module';
 import { ApplicationModule } from './application/application.module';
 import { BiometricModule } from './infrastructure/integrations/biometric/biometric.module';
+import { HttpModule } from './infrastructure/http/http.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -29,10 +28,9 @@ import { BiometricModule } from './infrastructure/integrations/biometric/biometr
 
     DatabaseModule,
     RabbitMQModule,
-    ApplicationModule,
-    RabbitMQModule,
-    DatabaseModule,
     BiometricModule,
+    ApplicationModule,
+    HttpModule,
   ],
 })
 export class AppModule {}

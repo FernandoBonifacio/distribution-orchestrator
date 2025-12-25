@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { DistributionRunRepository } from 'src/domain/repositories/distribution-run.repository';
 import { EventDistributionRepository } from 'src/domain/repositories/event-distribution.repository';
@@ -9,6 +9,7 @@ import { EntityId } from 'src/domain/common/entity-id';
 import { EventId } from 'src/domain/distribution/value-objects/event-id';
 import { EventDistribution } from 'src/domain/distribution/entities/event-distribution';
 
+@Injectable()
 export class ProcessDistributionItemUseCase {
   private readonly logger = new Logger(ProcessDistributionItemUseCase.name);
 
@@ -27,8 +28,11 @@ export class ProcessDistributionItemUseCase {
     biometricId: string;
     imageUrl: string;
   }): Promise<void> {
+    // 🔒 NORMALIZAÇÃO / BLINDAGEM (aqui o erro explode cedo)
     const runId = EntityId.create(params.runId);
     const eventId = EventId.create(params.eventId);
+    const userId = EntityId.create(params.userId);
+    const biometricId = EntityId.create(params.biometricId);
 
     const run = await this.runRepo.findById(runId);
     if (!run) {
@@ -43,15 +47,15 @@ export class ProcessDistributionItemUseCase {
     }
 
     const minute = this.getMinute();
-
     const runMinute = await this.runMinuteRepo.findOrCreate(run.getId(), minute);
 
+    // ✅ AGORA ESTÁ CORRETO
     const item = EventDistribution.create({
       distributionRunId: runId,
       eventId,
-      document: params.document,
-      userId: params.userId,
-      biometricId: params.biometricId,
+      document: params.document, // CPF continua aqui
+      userId, // EntityId
+      biometricId, // EntityId
     });
 
     const result = await this.syncFinalRepo.insert({
@@ -64,22 +68,17 @@ export class ProcessDistributionItemUseCase {
     });
 
     run.incrementProcessed();
+    runMinute.incrementProcessed();
 
     if (result.status === 'inserted') {
       item.markSent();
       item.markProcessed();
       run.incrementDistributed();
+      runMinute.incrementDistributed();
     } else {
       item.markSent();
       item.markProcessed();
       run.incrementDuplicated();
-    }
-
-    runMinute.incrementProcessed();
-
-    if (result.status === 'inserted') {
-      runMinute.incrementDistributed();
-    } else {
       runMinute.incrementDuplicated();
     }
 
@@ -87,7 +86,6 @@ export class ProcessDistributionItemUseCase {
     await this.runMinuteRepo.save(runMinute);
 
     const finished = run.finishIfCompleted();
-
     await this.runRepo.save(run);
 
     if (finished) {

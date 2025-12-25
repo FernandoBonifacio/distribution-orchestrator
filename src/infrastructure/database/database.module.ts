@@ -13,14 +13,16 @@ import { EventDistributionOrmEntity } from './typeorm/entities/event-distributio
 import { SyncFinalOrmEntity } from './typeorm/entities/sync-final.orm-entity';
 import { DistributionRunRepository } from 'src/domain/repositories/distribution-run.repository';
 import { EventDistributionRepository } from 'src/domain/repositories/event-distribution.repository';
+import { DistributionRunMinuteRepository } from 'src/domain/repositories/distribution-run-minute.repository';
+import { TypeOrmDistributionRunMinuteRepository } from './typeorm/repositories/typeorm-distribution-run-minute.repository';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       DistributionRunOrmEntity,
-      DistributionRunMinuteOrmEntity,
       EventDistributionOrmEntity,
       SyncFinalOrmEntity,
+      DistributionRunMinuteOrmEntity,
     ]),
   ],
   providers: [
@@ -36,7 +38,16 @@ import { EventDistributionRepository } from 'src/domain/repositories/event-distr
       provide: SyncFinalRepository,
       useClass: TypeOrmSyncFinalRepository,
     },
+    {
+      provide: DistributionRunMinuteRepository,
+      useClass: TypeOrmDistributionRunMinuteRepository,
+    },
   ],
-  exports: [DistributionRunRepository, EventDistributionRepository, SyncFinalRepository],
+  exports: [
+    DistributionRunRepository,
+    EventDistributionRepository,
+    SyncFinalRepository,
+    DistributionRunMinuteRepository,
+  ],
 })
 export class DatabaseModule {}

@@ -9,9 +9,13 @@ export class EventDistributionMapper {
     orm.id = entity.getId().toString();
     orm.distributionRunId = entity.getDistributionRunId().toString();
     orm.eventId = entity.getEventId().toString();
+
     orm.document = entity.getDocument();
-    orm.userId = entity.getUserId();
-    orm.biometricId = entity.getBiometricId();
+
+    // 🔒 Value Object → string
+    orm.userId = entity.getUserId().toString();
+    orm.biometricId = entity.getBiometricId().toString();
+
     orm.status = entity.getStatus();
 
     orm.createdAt = entity.getCreatedAt();
@@ -26,9 +30,13 @@ export class EventDistributionMapper {
       id: orm.id,
       distributionRunId: orm.distributionRunId,
       eventId: orm.eventId,
+
       document: orm.document,
+
+      // 🔒 string → Value Object (valida UUID)
       userId: orm.userId,
       biometricId: orm.biometricId,
+
       status: orm.status as DistributionItemStatus,
       createdAt: orm.createdAt,
       processedAt: orm.processedAt ?? undefined,

@@ -13,8 +13,8 @@ export class EventDistribution {
     private readonly distributionRunId: EntityId,
     private readonly eventId: EventId,
     private readonly document: string,
-    private readonly userId: string,
-    private readonly biometricId: string,
+    private readonly userId: EntityId, // ✅ AGORA É EntityId
+    private readonly biometricId: EntityId, // ✅ AGORA É EntityId
     private readonly createdAt: Date,
   ) {
     this.status = DistributionItemStatus.PENDING;
@@ -24,13 +24,13 @@ export class EventDistribution {
     distributionRunId: EntityId;
     eventId: EventId;
     document: string;
-    userId: string;
-    biometricId: string;
+    userId: EntityId; // ✅ OBRIGATÓRIO
+    biometricId: EntityId; // ✅ OBRIGATÓRIO
   }): EventDistribution {
     assert(!!params.document, 'document_required');
 
     return new EventDistribution(
-      EntityId.create(),
+      EntityId.create(), // gera ID novo
       params.distributionRunId,
       params.eventId,
       params.document,
@@ -57,8 +57,8 @@ export class EventDistribution {
       EntityId.create(params.distributionRunId),
       EventId.create(params.eventId),
       params.document,
-      params.userId,
-      params.biometricId,
+      EntityId.create(params.userId), // ✅ BLINDADO
+      EntityId.create(params.biometricId), // ✅ BLINDADO
       params.createdAt,
     );
 
@@ -90,6 +90,8 @@ export class EventDistribution {
     this.processedAt = new Date();
   }
 
+  // ===== GETTERS =====
+
   getStatus(): DistributionItemStatus {
     return this.status;
   }
@@ -110,11 +112,11 @@ export class EventDistribution {
     return this.document;
   }
 
-  getUserId(): string {
+  getUserId(): EntityId {
     return this.userId;
   }
 
-  getBiometricId(): string {
+  getBiometricId(): EntityId {
     return this.biometricId;
   }
 

@@ -32,7 +32,19 @@ export class TypeOrmDistributionRunMinuteRepository implements DistributionRunMi
     if (orm) return DistributionRunMinuteMapper.toDomain(orm);
 
     const created = DistributionRunMinute.create(runId, minute);
-    await this.save(created);
-    return created;
+    try {
+      await this.save(created);
+      return created;
+    } catch (error: unknown) {
+      const existing = await this.ormRepo.findOne({
+        where: {
+          distributionRunId: runId.toString(),
+          minute,
+        },
+      });
+
+      if (existing) return DistributionRunMinuteMapper.toDomain(existing);
+      throw error;
+    }
   }
 }

@@ -8,10 +8,8 @@ async function bootstrap() {
   const useCase = app.get(StartDistributionUseCase);
 
   await useCase.execute({
-    tenantId: 'tenant-test',
-    eventId: 'event-123',
-    totalFound: 10,
-    totalEligible: 8,
+    tenantId: 'sandbox-company',
+    eventId: 'event-sbx-001',
   });
 
   await app.close();
