@@ -1,6 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RabbitMQConnection } from './rabbitmq.connection';
 import { ProcessDistributionItemUseCase } from 'src/application/use-cases/process-distribution-item.use-case';
+import { QUEUES } from './rabbitmq.queues';
+import { RabbitMQTopology } from './rabbitmq.topology';
 
 @Injectable()
 export class RabbitMQConsumer implements OnModuleInit {
@@ -9,17 +11,18 @@ export class RabbitMQConsumer implements OnModuleInit {
   constructor(
     private readonly conn: RabbitMQConnection,
     private readonly processUseCase: ProcessDistributionItemUseCase,
+    private readonly topology: RabbitMQTopology,
   ) {}
 
   async onModuleInit() {
+    await this.topology.setup();
     const channel = await this.conn.getChannel();
 
-    await channel.consume('distribution.queue', async (msg) => {
+    await channel.consume(QUEUES.DISTRIBUTION, async (msg) => {
       if (!msg) return;
 
-      const payload = JSON.parse(msg.content.toString());
-
       try {
+        const payload = JSON.parse(msg.content.toString());
         await this.processUseCase.execute(payload);
         channel.ack(msg);
       } catch (error: unknown) {
@@ -32,6 +35,6 @@ export class RabbitMQConsumer implements OnModuleInit {
       }
     });
 
-    this.logger.log('Consumer ativo em distribution.queue');
+    this.logger.log(`Consumer ativo em ${QUEUES.DISTRIBUTION}`);
   }
 }

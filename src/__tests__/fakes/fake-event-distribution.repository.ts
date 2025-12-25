@@ -19,9 +19,22 @@ export class FakeEventDistributionRepository implements EventDistributionReposit
     return this.items.filter((i) => i['distributionRunId'].equals(runId));
   }
 
+  async findByRunIdAndBiometricId(
+    runId: EntityId,
+    biometricId: string,
+  ): Promise<EventDistribution | null> {
+    const item = this.items.find(
+      (i) => i['distributionRunId'].equals(runId) && i.getBiometricId() === biometricId,
+    );
+
+    return item ?? null;
+  }
+
   async findFailedByRunId(runId: EntityId): Promise<EventDistribution[]> {
     return this.items.filter(
-      (i) => i['distributionRunId'].equals(runId) && i.getStatus() === 'FAILED',
+      (i) =>
+        i['distributionRunId'].equals(runId) &&
+        (i.getStatus() === 'FAILED' || i.getStatus() === 'ERROR'),
     );
   }
 

@@ -8,6 +8,8 @@ import { DistributionRunMinuteRepository } from 'src/domain/repositories/distrib
 import { EntityId } from 'src/domain/common/entity-id';
 import { EventId } from 'src/domain/distribution/value-objects/event-id';
 import { EventDistribution } from 'src/domain/distribution/entities/event-distribution';
+import { DistributionRunStatus } from 'src/domain/distribution/enums/distribution-run-status';
+import { DistributionItemStatus } from 'src/domain/distribution/enums/distribution-item-status';
 
 @Injectable()
 export class ProcessDistributionItemUseCase {
@@ -31,67 +33,108 @@ export class ProcessDistributionItemUseCase {
     // 🔒 NORMALIZAÇÃO / BLINDAGEM (aqui o erro explode cedo)
     const runId = EntityId.create(params.runId);
     const eventId = EventId.create(params.eventId);
-    const userId = EntityId.create(params.userId);
-    const biometricId = EntityId.create(params.biometricId);
+    const userId = params.userId;
+    const biometricId = params.biometricId;
 
     const run = await this.runRepo.findById(runId);
     if (!run) {
       throw new Error('distribution_run_not_found');
     }
 
-    if (run.getStatus() !== 'RUNNING') {
+    const minute = this.getMinute();
+    await this.runMinuteRepo.findOrCreate(run.getId(), minute);
+
+    const existingItem = await this.itemRepo.findByRunIdAndBiometricId(runId, biometricId);
+    if (
+      run.getStatus() !== DistributionRunStatus.RUNNING &&
+      (!existingItem ||
+        (existingItem.getStatus() !== DistributionItemStatus.PENDING &&
+          existingItem.getStatus() !== DistributionItemStatus.SENT))
+    ) {
       this.logger.warn(
         `Ignoring message because run is ${run.getStatus()} | runId=${run.getId().toString()}`,
       );
       return;
     }
 
-    const minute = this.getMinute();
-    const runMinute = await this.runMinuteRepo.findOrCreate(run.getId(), minute);
-
-    // ✅ AGORA ESTÁ CORRETO
-    const item = EventDistribution.create({
-      distributionRunId: runId,
-      eventId,
-      document: params.document, // CPF continua aqui
-      userId, // EntityId
-      biometricId, // EntityId
-    });
-
-    const result = await this.syncFinalRepo.insert({
-      tenantId: run.getTenantId(),
-      eventId,
-      document: params.document,
-      biometricId: params.biometricId,
-      imageUrl: params.imageUrl,
-      runId,
-    });
-
-    run.incrementProcessed();
-    runMinute.incrementProcessed();
-
-    if (result.status === 'inserted') {
-      item.markSent();
-      item.markProcessed();
-      run.incrementDistributed();
-      runMinute.incrementDistributed();
-    } else {
-      item.markSent();
-      item.markProcessed();
-      run.incrementDuplicated();
-      runMinute.incrementDuplicated();
+    if (existingItem) {
+      const status = existingItem.getStatus();
+      if (
+        status === DistributionItemStatus.PROCESSED ||
+        status === DistributionItemStatus.FINISHED ||
+        status === DistributionItemStatus.FAILED ||
+        status === DistributionItemStatus.ERROR
+      ) {
+        this.logger.log(
+          `Skipping already processed item | runId=${run.getId().toString()} | biometricId=${biometricId} | status=${status}`,
+        );
+        return;
+      }
     }
 
-    await this.itemRepo.save(item);
-    await this.runMinuteRepo.save(runMinute);
+    const item =
+      existingItem ??
+      EventDistribution.create({
+        distributionRunId: runId,
+        eventId,
+        document: params.document,
+        userId,
+        biometricId,
+      });
 
-    const finished = run.finishIfCompleted();
-    await this.runRepo.save(run);
+    try {
+      const result = await this.syncFinalRepo.insert({
+        tenantId: run.getTenantId(),
+        eventId,
+        document: params.document,
+        biometricId,
+        imageUrl: params.imageUrl,
+        runId,
+      });
 
-    if (finished) {
+      if (item.getStatus() === DistributionItemStatus.PENDING) {
+        item.markSent();
+      }
+
+      const metricsDelta = {
+        processed: 1,
+        distributed: result.status === 'inserted' ? 1 : 0,
+        duplicated: result.status === 'already_exists' ? 1 : 0,
+      };
+
+      const runAfter = await this.runRepo.incrementMetrics(runId, metricsDelta);
+      await this.runMinuteRepo.incrementMetrics(runId, minute, metricsDelta);
+
+      item.markProcessed();
+      await this.itemRepo.save(item);
+
+      const finished = runAfter.finishIfCompleted();
+      if (finished) {
+        await this.runRepo.save(runAfter);
+        this.logger.log(
+          `DistributionRun FINISHED | runId=${runAfter.getId().toString()} | eventId=${eventId.toString()}`,
+        );
+      }
+
+      const metrics = runAfter.getMetrics();
       this.logger.log(
-        `DistributionRun FINISHED | runId=${run.getId().toString()} | eventId=${eventId.toString()}`,
+        `Item processed | runId=${runAfter.getId().toString()} | eventId=${eventId.toString()} | biometricId=${biometricId} | result=${result.status} | processed=${metrics.totalProcessed} | distributed=${metrics.totalDistributed} | duplicated=${metrics.totalDuplicated} | failed=${metrics.totalFailed}`,
       );
+    } catch (error: unknown) {
+      if (item.getStatus() === DistributionItemStatus.PENDING) {
+        item.markSent();
+      }
+      item.markFailed(error instanceof Error ? error.message : 'unknown_error');
+      const runAfter = await this.runRepo.incrementMetrics(runId, { processed: 1, failed: 1 });
+      await this.runMinuteRepo.incrementMetrics(runId, minute, { processed: 1, failed: 1 });
+
+      await this.itemRepo.save(item);
+
+      this.logger.error(
+        `Item failed | runId=${runAfter.getId().toString()} | eventId=${eventId.toString()} | biometricId=${biometricId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
     }
   }
 

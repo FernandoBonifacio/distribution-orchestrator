@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prepare": "husky",
-    "start:distribution": "ts-node -r tsconfig-paths/register src/scripts/start-distribution.ts"
+    "start:distribution": "ts-node -r tsconfig-paths/register src/scripts/start-distribution.ts",
+    "start:distribution:poll": "ts-node -r tsconfig-paths/register src/scripts/poll-distribution.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -84,7 +85,6 @@
     "coverageDirectory": "./coverage",
     "testEnvironment": "node"
   },
-  "prepare": "husky",
   "lint-staged": {
     "src/**/*.ts": [
       "eslint --fix",

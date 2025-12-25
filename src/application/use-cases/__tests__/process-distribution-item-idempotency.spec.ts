@@ -1,6 +1,7 @@
 import { ProcessDistributionItemUseCase } from '../process-distribution-item.use-case';
 
 import { DistributionRun } from 'src/domain/distribution/entities/distribution-run';
+import { EventDistribution } from 'src/domain/distribution/entities/event-distribution';
 import { TenantId } from 'src/domain/distribution/value-objects/tenant-id';
 import { EventId } from 'src/domain/distribution/value-objects/event-id';
 import { DistributionRunStatus } from 'src/domain/distribution/enums/distribution-run-status';
@@ -16,12 +17,14 @@ describe('ProcessDistributionItemUseCase — Idempotency', () => {
     findById: jest.fn(),
     save: jest.fn(),
     findActiveByEvent: jest.fn(),
+    incrementMetrics: jest.fn(),
   };
 
   const itemRepo: jest.Mocked<EventDistributionRepository> = {
     save: jest.fn(),
     saveMany: jest.fn(),
     findByRunId: jest.fn(),
+    findByRunIdAndBiometricId: jest.fn(),
     findFailedByRunId: jest.fn(),
     findEligibleByEvent: jest.fn(),
   };
@@ -33,6 +36,7 @@ describe('ProcessDistributionItemUseCase — Idempotency', () => {
   const runMinuteRepo: jest.Mocked<DistributionRunMinuteRepository> = {
     findOrCreate: jest.fn(),
     save: jest.fn(),
+    incrementMetrics: jest.fn(),
   };
 
   beforeEach(() => {
@@ -48,8 +52,18 @@ describe('ProcessDistributionItemUseCase — Idempotency', () => {
     run.start(1, 1);
 
     runRepo.findById.mockResolvedValue(run);
+    runRepo.incrementMetrics.mockImplementation(async (_id, deltas) => {
+      if (deltas.processed) run.incrementProcessed();
+      if (deltas.distributed) run.incrementDistributed();
+      if (deltas.failed) run.incrementFailed();
+      if (deltas.duplicated) run.incrementDuplicated();
+      return run;
+    });
 
     runMinuteRepo.findOrCreate.mockResolvedValue(
+      DistributionRunMinute.create(run.getId(), new Date()),
+    );
+    runMinuteRepo.incrementMetrics.mockResolvedValue(
       DistributionRunMinute.create(run.getId(), new Date()),
     );
 
@@ -63,6 +77,19 @@ describe('ProcessDistributionItemUseCase — Idempotency', () => {
       syncFinalRepo,
       runMinuteRepo,
     );
+
+    const processedItem = EventDistribution.create({
+      distributionRunId: run.getId(),
+      eventId: EventId.create('event-1'),
+      document: '123',
+      userId: '123',
+      biometricId: 'bio-1',
+    });
+    processedItem.markSent();
+    processedItem.markProcessed();
+    itemRepo.findByRunIdAndBiometricId
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(processedItem);
 
     const payload = {
       runId: run.getId().toString(),

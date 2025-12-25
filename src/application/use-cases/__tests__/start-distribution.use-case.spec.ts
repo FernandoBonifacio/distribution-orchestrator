@@ -13,12 +13,14 @@ describe('StartDistributionUseCase', () => {
     findActiveByEvent: jest.fn(),
     save: jest.fn(),
     findById: jest.fn(),
+    incrementMetrics: jest.fn(),
   };
 
   const eventRepo: jest.Mocked<EventDistributionRepository> = {
     save: jest.fn(),
     saveMany: jest.fn(),
     findByRunId: jest.fn(),
+    findByRunIdAndBiometricId: jest.fn(),
     findFailedByRunId: jest.fn(),
     findEligibleByEvent: jest.fn(),
   };

@@ -8,4 +8,14 @@ export abstract class DistributionRunRepository {
   abstract findById(id: EntityId): Promise<DistributionRun | null>;
 
   abstract findActiveByEvent(eventId: EventId): Promise<DistributionRun | null>;
+
+  abstract incrementMetrics(
+    id: EntityId,
+    deltas: {
+      processed?: number;
+      distributed?: number;
+      failed?: number;
+      duplicated?: number;
+    },
+  ): Promise<DistributionRun>;
 }

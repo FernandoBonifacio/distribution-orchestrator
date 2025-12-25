@@ -3,4 +3,6 @@ export enum DistributionItemStatus {
   SENT = 'SENT',
   PROCESSED = 'PROCESSED',
   FAILED = 'FAILED',
+  FINISHED = 'FINISHED',
+  ERROR = 'ERROR',
 }

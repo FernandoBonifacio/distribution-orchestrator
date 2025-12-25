@@ -32,8 +32,6 @@ export class SandboxSeedService {
 
       await manager.save(event);
 
-      await manager.save(event);
-
       const users: SandboxUserDataOrmEntity[] = [];
       const biometrics: SandboxBiometricOrmEntity[] = [];
 

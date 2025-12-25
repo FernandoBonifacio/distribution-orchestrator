@@ -12,9 +12,8 @@ export class EventDistributionMapper {
 
     orm.document = entity.getDocument();
 
-    // 🔒 Value Object → string
-    orm.userId = entity.getUserId().toString();
-    orm.biometricId = entity.getBiometricId().toString();
+    orm.userId = entity.getUserId();
+    orm.biometricId = entity.getBiometricId();
 
     orm.status = entity.getStatus();
 
@@ -33,7 +32,6 @@ export class EventDistributionMapper {
 
       document: orm.document,
 
-      // 🔒 string → Value Object (valida UUID)
       userId: orm.userId,
       biometricId: orm.biometricId,
 

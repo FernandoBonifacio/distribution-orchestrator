@@ -14,12 +14,14 @@ describe('ProcessDistributionItemUseCase', () => {
     findById: jest.fn(),
     save: jest.fn(),
     findActiveByEvent: jest.fn(),
+    incrementMetrics: jest.fn(),
   };
 
   const itemRepo: jest.Mocked<EventDistributionRepository> = {
     save: jest.fn(),
     saveMany: jest.fn(),
     findByRunId: jest.fn(),
+    findByRunIdAndBiometricId: jest.fn(),
     findFailedByRunId: jest.fn(),
     findEligibleByEvent: jest.fn(),
   };
@@ -31,10 +33,12 @@ describe('ProcessDistributionItemUseCase', () => {
   const runMinuteRepo: jest.Mocked<DistributionRunMinuteRepository> = {
     findOrCreate: jest.fn(),
     save: jest.fn(),
+    incrementMetrics: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    itemRepo.findByRunIdAndBiometricId.mockResolvedValue(null);
   });
 
   it('should process an item successfully and update metrics', async () => {
@@ -46,8 +50,18 @@ describe('ProcessDistributionItemUseCase', () => {
     run.start(1, 1);
 
     runRepo.findById.mockResolvedValue(run);
+    runRepo.incrementMetrics.mockImplementation(async (_id, deltas) => {
+      if (deltas.processed) run.incrementProcessed();
+      if (deltas.distributed) run.incrementDistributed();
+      if (deltas.failed) run.incrementFailed();
+      if (deltas.duplicated) run.incrementDuplicated();
+      return run;
+    });
 
     runMinuteRepo.findOrCreate.mockResolvedValue(
+      DistributionRunMinute.create(run.getId(), new Date()),
+    );
+    runMinuteRepo.incrementMetrics.mockResolvedValue(
       DistributionRunMinute.create(run.getId(), new Date()),
     );
 
@@ -83,8 +97,18 @@ describe('ProcessDistributionItemUseCase', () => {
     run.start(1, 1);
 
     runRepo.findById.mockResolvedValue(run);
+    runRepo.incrementMetrics.mockImplementation(async (_id, deltas) => {
+      if (deltas.processed) run.incrementProcessed();
+      if (deltas.distributed) run.incrementDistributed();
+      if (deltas.failed) run.incrementFailed();
+      if (deltas.duplicated) run.incrementDuplicated();
+      return run;
+    });
 
     runMinuteRepo.findOrCreate.mockResolvedValue(
+      DistributionRunMinute.create(run.getId(), new Date()),
+    );
+    runMinuteRepo.incrementMetrics.mockResolvedValue(
       DistributionRunMinute.create(run.getId(), new Date()),
     );
 

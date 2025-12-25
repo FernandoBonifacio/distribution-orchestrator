@@ -26,4 +26,33 @@ export class FakeDistributionRunRepository implements DistributionRunRepository 
       ) ?? null
     );
   }
+
+  async incrementMetrics(
+    id: EntityId,
+    deltas: {
+      processed?: number;
+      distributed?: number;
+      failed?: number;
+      duplicated?: number;
+    },
+  ): Promise<DistributionRun> {
+    const run = await this.findById(id);
+    if (!run) throw new Error('distribution_run_not_found');
+
+    if (deltas.processed) {
+      for (let i = 0; i < deltas.processed; i += 1) run.incrementProcessed();
+    }
+    if (deltas.distributed) {
+      for (let i = 0; i < deltas.distributed; i += 1) run.incrementDistributed();
+    }
+    if (deltas.failed) {
+      for (let i = 0; i < deltas.failed; i += 1) run.incrementFailed();
+    }
+    if (deltas.duplicated) {
+      for (let i = 0; i < deltas.duplicated; i += 1) run.incrementDuplicated();
+    }
+
+    await this.save(run);
+    return run;
+  }
 }

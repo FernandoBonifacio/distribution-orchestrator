@@ -44,4 +44,43 @@ export class TypeOrmDistributionRunRepository implements DistributionRunReposito
 
     return DistributionRunMapper.toDomain(orm);
   }
+
+  async incrementMetrics(
+    id: EntityId,
+    deltas: {
+      processed?: number;
+      distributed?: number;
+      failed?: number;
+      duplicated?: number;
+    },
+  ): Promise<DistributionRun> {
+    const set: Record<string, () => string> = {};
+
+    if (deltas.processed) {
+      set.totalProcessed = () => `"total_processed" + ${deltas.processed}`;
+    }
+    if (deltas.distributed) {
+      set.totalDistributed = () => `"total_distributed" + ${deltas.distributed}`;
+    }
+    if (deltas.failed) {
+      set.totalFailed = () => `"total_failed" + ${deltas.failed}`;
+    }
+    if (deltas.duplicated) {
+      set.totalDuplicated = () => `"total_duplicated" + ${deltas.duplicated}`;
+    }
+
+    await this.ormRepo
+      .createQueryBuilder()
+      .update(DistributionRunOrmEntity)
+      .set(set as Record<string, () => string>)
+      .where('id = :id', { id: id.toString() })
+      .execute();
+
+    const updated = await this.findById(id);
+    if (!updated) {
+      throw new Error('distribution_run_not_found');
+    }
+
+    return updated;
+  }
 }

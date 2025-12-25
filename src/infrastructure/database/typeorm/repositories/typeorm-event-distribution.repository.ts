@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { EventDistributionRepository } from '../../../../domain/repositories/event-distribution.repository';
 import { EventDistribution } from '../../../../domain/distribution/entities/event-distribution';
@@ -36,11 +36,27 @@ export class TypeOrmEventDistributionRepository implements EventDistributionRepo
     return rows.map(EventDistributionMapper.toDomain);
   }
 
+  async findByRunIdAndBiometricId(
+    runId: EntityId,
+    biometricId: string,
+  ): Promise<EventDistribution | null> {
+    const row = await this.ormRepo.findOne({
+      where: {
+        distributionRunId: runId.toString(),
+        biometricId,
+      },
+    });
+
+    if (!row) return null;
+
+    return EventDistributionMapper.toDomain(row);
+  }
+
   async findFailedByRunId(runId: EntityId): Promise<EventDistribution[]> {
     const rows = await this.ormRepo.find({
       where: {
         distributionRunId: runId.toString(),
-        status: DistributionItemStatus.FAILED,
+        status: In([DistributionItemStatus.FAILED, DistributionItemStatus.ERROR]),
       },
     });
 

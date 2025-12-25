@@ -11,15 +11,15 @@ export class EventDistributionOrmEntity {
 
   @Index()
   @Column({ type: 'varchar' })
-  document!: string; // CPF OK
+  document!: string;
 
-  @Column({ name: 'userId', type: 'uuid' })
-  userId!: string; // UUID DO USER
+  @Column({ name: 'user_id', type: 'varchar' })
+  userId!: string;
 
-  @Column({ name: 'event_id', type: 'uuid' })
+  @Column({ name: 'event_id', type: 'varchar' })
   eventId!: string;
 
-  @Column({ name: 'biometric_id', type: 'uuid' })
+  @Column({ name: 'biometric_id', type: 'varchar' })
   biometricId!: string;
 
   @Column({ type: 'varchar' })

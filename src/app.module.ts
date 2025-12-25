@@ -7,6 +7,8 @@ import { RabbitMQModule } from './infrastructure/messaging/rabbitmq/rabbitmq.mod
 import { ApplicationModule } from './application/application.module';
 import { BiometricModule } from './infrastructure/integrations/biometric/biometric.module';
 import { HttpModule } from './infrastructure/http/http.module';
+import { HealthModule } from './infrastructure/health/health.module';
+import { ObservabilityModule } from './infrastructure/observability/observability.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { HttpModule } from './infrastructure/http/http.module';
     BiometricModule,
     ApplicationModule,
     HttpModule,
+    HealthModule,
+    ObservabilityModule,
   ],
 })
 export class AppModule {}

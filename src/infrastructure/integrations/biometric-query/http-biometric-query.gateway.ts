@@ -8,15 +8,19 @@ import {
 @Injectable()
 export class HttpBiometricQueryGateway implements BiometricQueryGateway {
   async findEligibleByEvent(params: { eventId: string }): Promise<BiometricDTO[]> {
-    const response = await axios.get<BiometricDTO[]>(
-      `${process.env.BIOMETRIC_API_URL}/biometrics/eligible`,
-      {
-        params: {
-          eventId: params.eventId,
-        },
-        timeout: 5000,
+    const baseUrl = process.env.BIOMETRIC_QUERY_URL ?? process.env.BIOMETRIC_API_URL;
+    if (!baseUrl) {
+      throw new Error('biometric_query_url_not_configured');
+    }
+
+    const url = baseUrl.endsWith('/eligible') ? baseUrl : `${baseUrl.replace(/\/$/, '')}/eligible`;
+
+    const response = await axios.get<BiometricDTO[]>(url, {
+      params: {
+        eventId: params.eventId,
       },
-    );
+      timeout: 5000,
+    });
 
     return response.data.map((item) => ({
       biometricId: item.biometricId,

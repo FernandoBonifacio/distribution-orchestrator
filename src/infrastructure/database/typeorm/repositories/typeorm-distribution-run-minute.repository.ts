@@ -47,4 +47,52 @@ export class TypeOrmDistributionRunMinuteRepository implements DistributionRunMi
       throw error;
     }
   }
+
+  async incrementMetrics(
+    runId: EntityId,
+    minute: Date,
+    deltas: {
+      processed?: number;
+      distributed?: number;
+      failed?: number;
+      duplicated?: number;
+    },
+  ): Promise<DistributionRunMinute> {
+    await this.findOrCreate(runId, minute);
+
+    const set: Record<string, () => string> = {};
+
+    if (deltas.processed) {
+      set.processed = () => `"processed" + ${deltas.processed}`;
+    }
+    if (deltas.distributed) {
+      set.distributed = () => `"distributed" + ${deltas.distributed}`;
+    }
+    if (deltas.failed) {
+      set.failed = () => `"failed" + ${deltas.failed}`;
+    }
+    if (deltas.duplicated) {
+      set.duplicated = () => `"duplicated" + ${deltas.duplicated}`;
+    }
+
+    await this.ormRepo
+      .createQueryBuilder()
+      .update(DistributionRunMinuteOrmEntity)
+      .set(set as Record<string, () => string>)
+      .where('distribution_run_id = :runId AND minute = :minute', {
+        runId: runId.toString(),
+        minute,
+      })
+      .execute();
+
+    const updated = await this.ormRepo.findOne({
+      where: { distributionRunId: runId.toString(), minute },
+    });
+
+    if (!updated) {
+      throw new Error('distribution_run_minute_not_found');
+    }
+
+    return DistributionRunMinuteMapper.toDomain(updated);
+  }
 }

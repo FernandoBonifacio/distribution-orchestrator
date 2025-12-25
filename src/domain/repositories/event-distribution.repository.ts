@@ -9,6 +9,11 @@ export abstract class EventDistributionRepository {
 
   abstract findByRunId(runId: EntityId): Promise<EventDistribution[]>;
 
+  abstract findByRunIdAndBiometricId(
+    runId: EntityId,
+    biometricId: string,
+  ): Promise<EventDistribution | null>;
+
   abstract findFailedByRunId(runId: EntityId): Promise<EventDistribution[]>;
 
   abstract findEligibleByEvent(eventId: EventId): Promise<EventDistribution[]>;

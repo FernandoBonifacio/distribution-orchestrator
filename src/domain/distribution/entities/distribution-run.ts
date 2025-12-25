@@ -88,6 +88,15 @@ export class DistributionRun {
     this.status = DistributionRunStatus.RUNNING;
   }
 
+  addPlanned(totalFound: number, totalEligible: number): void {
+    assert(this.status === DistributionRunStatus.RUNNING, 'distribution_not_running');
+    assert(totalFound >= 0, 'total_found_invalid');
+    assert(totalEligible >= 0, 'total_eligible_invalid');
+
+    this.totalFound += totalFound;
+    this.totalEligible += totalEligible;
+  }
+
   finish(): void {
     assert(this.status === DistributionRunStatus.RUNNING, 'distribution_not_running');
     assert(

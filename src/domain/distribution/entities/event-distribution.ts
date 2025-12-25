@@ -13,8 +13,8 @@ export class EventDistribution {
     private readonly distributionRunId: EntityId,
     private readonly eventId: EventId,
     private readonly document: string,
-    private readonly userId: EntityId, // ✅ AGORA É EntityId
-    private readonly biometricId: EntityId, // ✅ AGORA É EntityId
+    private readonly userId: string,
+    private readonly biometricId: string,
     private readonly createdAt: Date,
   ) {
     this.status = DistributionItemStatus.PENDING;
@@ -24,8 +24,8 @@ export class EventDistribution {
     distributionRunId: EntityId;
     eventId: EventId;
     document: string;
-    userId: EntityId; // ✅ OBRIGATÓRIO
-    biometricId: EntityId; // ✅ OBRIGATÓRIO
+    userId: string;
+    biometricId: string;
   }): EventDistribution {
     assert(!!params.document, 'document_required');
 
@@ -57,8 +57,8 @@ export class EventDistribution {
       EntityId.create(params.distributionRunId),
       EventId.create(params.eventId),
       params.document,
-      EntityId.create(params.userId), // ✅ BLINDADO
-      EntityId.create(params.biometricId), // ✅ BLINDADO
+      params.userId,
+      params.biometricId,
       params.createdAt,
     );
 
@@ -76,7 +76,7 @@ export class EventDistribution {
 
   markProcessed(): void {
     assert(this.status === DistributionItemStatus.SENT, 'item_not_sent');
-    this.status = DistributionItemStatus.PROCESSED;
+    this.status = DistributionItemStatus.FINISHED;
     this.processedAt = new Date();
   }
 
@@ -85,7 +85,7 @@ export class EventDistribution {
       this.status === DistributionItemStatus.SENT || this.status === DistributionItemStatus.PENDING,
       'invalid_state_for_fail',
     );
-    this.status = DistributionItemStatus.FAILED;
+    this.status = DistributionItemStatus.ERROR;
     this.errorMessage = error;
     this.processedAt = new Date();
   }
@@ -112,11 +112,11 @@ export class EventDistribution {
     return this.document;
   }
 
-  getUserId(): EntityId {
+  getUserId(): string {
     return this.userId;
   }
 
-  getBiometricId(): EntityId {
+  getBiometricId(): string {
     return this.biometricId;
   }
 

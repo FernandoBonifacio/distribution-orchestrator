@@ -97,3 +97,87 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+# Distribution Orchestrator
+
+Orquestrador de distribuicao de biometria. Ele busca faces elegiveis, cria itens
+de distribuicao, publica no RabbitMQ e processa cada item para inserir na
+sync_final. Foi pensado para rodar continuamente (dias) com polling automatico.
+
+## Como funciona
+
+1) Start (HTTP ou script)
+- Busca biometria elegivel via BiometricQueryGateway.
+- Cria DistributionRun.
+- Cria itens em event_distribution.
+- Publica mensagens na fila distribution.queue.
+
+2) Consumer (RabbitMQ)
+- Consome distribution.queue.
+- Para cada item, insere na sync_final.
+- Atualiza metricas em distribution_run e distribution_run_minute.
+- Em erro, envia para DLQ.
+
+3) Polling automatico
+- Script start:distribution:poll chama o Start a cada 5 minutos.
+- Se ja existe run ativa, ele adiciona somente novos itens (sem duplicar).
+
+## Componentes principais
+
+- StartDistributionUseCase: cria run e publica mensagens.
+- ProcessDistributionItemUseCase: processa item e atualiza metricas.
+- RabbitMQProducer/Consumer: publicacao e consumo.
+- RabbitMQTopology: cria fila + DLQ.
+- BiometricQueryGateway: busca biometria (sandbox ou HTTP).
+
+## Tabelas
+
+- distribution_run: status e metricas globais.
+- distribution_run_minute: metricas por minuto.
+- event_distribution: log por item (status FINISHED ou ERROR).
+- sync_final: destino final (idempotente).
+
+## Status por item
+
+- FINISHED: entrou na sync_final.
+- ERROR: falhou no processamento.
+- Legados: PROCESSED/FAILED (mantidos por compatibilidade).
+
+## RabbitMQ
+
+- Fila: distribution.queue
+- DLQ: distribution.dlq
+- Ack em sucesso, nack (requeue=false) em erro.
+
+## Scripts
+
+- start:distribution: dispara uma distribuicao manual.
+- start:distribution:poll: polling automatico continuo.
+
+## Variaveis de ambiente
+
+- SANDBOX=true usa sandbox; false usa HTTP.
+- DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME
+- RABBITMQ_URL
+- EVENT_ID, TENANT_ID (polling)
+- POLL_INTERVAL_MS (padrao 5 min)
+- POLL_DURATION_MS (opcional, se quiser encerrar)
+
+## Como rodar
+
+```bash
+npm install
+npm run start
+```
+
+## Polling continuo (5 min)
+
+```bash
+SANDBOX=true TENANT_ID=sandbox-company EVENT_ID=event-sbx-001 npm run start:distribution:poll
+```
+
+## Polling com intervalo customizado
+
+```bash
+POLL_INTERVAL_MS=60000 SANDBOX=true TENANT_ID=sandbox-company EVENT_ID=event-sbx-001 npm run start:distribution:poll
+```

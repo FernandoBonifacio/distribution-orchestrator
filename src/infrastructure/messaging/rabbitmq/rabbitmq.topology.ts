@@ -1,16 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RabbitMQConnection } from './rabbitmq.connection';
+import { QUEUES } from './rabbitmq.queues';
 
 @Injectable()
-export class RabbitMQTopology {
+export class RabbitMQTopology implements OnModuleInit {
   private readonly logger = new Logger(RabbitMQTopology.name);
 
-  static QUEUE = 'distribution.queue';
-  static DLX = 'distribution.dlx';
-  static DLQ = 'distribution.dlq';
-  static DLQ_ROUTING_KEY = 'distribution.dlq';
+  private static DLX = 'distribution.dlx';
+  private static DLQ_ROUTING_KEY = 'distribution.dlq';
 
   constructor(private readonly conn: RabbitMQConnection) {}
+
+  async onModuleInit() {
+    await this.setup();
+  }
 
   async setup(): Promise<void> {
     const channel = await this.conn.getChannel();
@@ -19,7 +22,7 @@ export class RabbitMQTopology {
     await channel.assertExchange(RabbitMQTopology.DLX, 'direct', { durable: true });
 
     // queue principal com dead-letter
-    await channel.assertQueue(RabbitMQTopology.QUEUE, {
+    await channel.assertQueue(QUEUES.DISTRIBUTION, {
       durable: true,
       arguments: {
         'x-dead-letter-exchange': RabbitMQTopology.DLX,
@@ -28,9 +31,9 @@ export class RabbitMQTopology {
     });
 
     // DLQ
-    await channel.assertQueue(RabbitMQTopology.DLQ, { durable: true });
+    await channel.assertQueue(QUEUES.DISTRIBUTION_DLQ, { durable: true });
     await channel.bindQueue(
-      RabbitMQTopology.DLQ,
+      QUEUES.DISTRIBUTION_DLQ,
       RabbitMQTopology.DLX,
       RabbitMQTopology.DLQ_ROUTING_KEY,
     );
@@ -38,6 +41,6 @@ export class RabbitMQTopology {
     // (opcional) QoS
     await channel.prefetch(10);
 
-    this.logger.log(`Topology ready: ${RabbitMQTopology.QUEUE} + DLQ ${RabbitMQTopology.DLQ}`);
+    this.logger.log(`Topology ready: ${QUEUES.DISTRIBUTION} + DLQ ${QUEUES.DISTRIBUTION_DLQ}`);
   }
 }
