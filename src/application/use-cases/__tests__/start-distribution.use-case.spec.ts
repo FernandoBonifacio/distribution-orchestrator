@@ -1,5 +1,8 @@
 import { StartDistributionUseCase } from '../start-distribution.use-case';
 import { DistributionRunStatus } from 'src/domain/distribution/enums/distribution-run-status';
+import { DistributionRun } from 'src/domain/distribution/entities/distribution-run';
+import { TenantId } from 'src/domain/distribution/value-objects/tenant-id';
+import { EventId } from 'src/domain/distribution/value-objects/event-id';
 import { DistributionRunRepository } from 'src/domain/repositories/distribution-run.repository';
 import { EventDistributionRepository } from 'src/domain/repositories/event-distribution.repository';
 import { BiometricQueryGateway } from 'src/domain/integrations/biometric-query.gateway';
@@ -27,7 +30,7 @@ describe('StartDistributionUseCase', () => {
   const producer: jest.Mocked<RabbitMQProducer> = {
     connect: jest.fn(),
     publish: jest.fn(),
-  } as jest.Mocked<RabbitMQProducer>;
+  } as unknown as jest.Mocked<RabbitMQProducer>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -54,8 +57,6 @@ describe('StartDistributionUseCase', () => {
     const run = await useCase.execute({
       tenantId: 'tenant-1',
       eventId: 'event-1',
-      totalFound: 2,
-      totalEligible: 2,
     });
 
     expect(run.getStatus()).toBe(DistributionRunStatus.RUNNING);
@@ -66,7 +67,11 @@ describe('StartDistributionUseCase', () => {
   });
 
   it('should throw if a run is already active', async () => {
-    runRepo.findActiveByEvent.mockResolvedValue({});
+    const activeRun = DistributionRun.create({
+      tenantId: TenantId.create('tenant-1'),
+      eventId: EventId.create('event-1'),
+    });
+    runRepo.findActiveByEvent.mockResolvedValue(activeRun);
 
     const useCase = new StartDistributionUseCase(runRepo, eventRepo, biometricGateway, producer);
 
@@ -74,8 +79,6 @@ describe('StartDistributionUseCase', () => {
       useCase.execute({
         tenantId: 'tenant-1',
         eventId: 'event-1',
-        totalFound: 1,
-        totalEligible: 1,
       }),
     ).rejects.toThrow();
   });
