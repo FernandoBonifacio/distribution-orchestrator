@@ -122,6 +122,35 @@ sync_final. Foi pensado para rodar continuamente (dias) com polling automatico.
 - Script start:distribution:poll chama o Start a cada 5 minutos.
 - Se ja existe run ativa, ele adiciona somente novos itens (sem duplicar).
 
+## Arquitetura
+
+Arquitetura baseada em DDD + Clean/Hexagonal (Ports & Adapters).
+
+- Domain: entidades, VOs e regras de negocio.
+- Application: casos de uso.
+- Infrastructure: adaptadores externos (DB, RabbitMQ, HTTP).
+- Ports: interfaces/repositorios que isolam o dominio.
+- NestJS faz a injecao de dependencias via modules.
+
+Diagrama simples:
+
+```text
+┌─────────────────────────────┐
+│        Infrastructure       │
+│  DB / RabbitMQ / HTTP / API │
+└───────────────▲─────────────┘
+                │ adapters
+┌───────────────┴─────────────┐
+│         Application         │
+│        Use Cases            │
+└───────────────▲─────────────┘
+                │ ports
+┌───────────────┴─────────────┐
+│            Domain           │
+│  Entities / Value Objects   │
+└─────────────────────────────┘
+```
+
 ## Componentes principais
 
 - StartDistributionUseCase: cria run e publica mensagens.
@@ -185,4 +214,3 @@ POLL_INTERVAL_MS=60000 SANDBOX=true TENANT_ID=sandbox-company EVENT_ID=event-sbx
 
 ## Doc
 [Orquestrador_Distribuicao_Biometria.pdf](https://github.com/user-attachments/files/24340821/Orquestrador_Distribuicao_Biometria.pdf)
-
