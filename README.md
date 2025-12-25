@@ -148,6 +148,7 @@ sync_final. Foi pensado para rodar continuamente (dias) com polling automatico.
 - Fila: distribution.queue
 - DLQ: distribution.dlq
 - Ack em sucesso, nack (requeue=false) em erro.
+- http://localhost:15672
 
 ## Scripts
 
