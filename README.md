@@ -181,3 +181,7 @@ SANDBOX=true TENANT_ID=sandbox-company EVENT_ID=event-sbx-001 npm run start:dist
 ```bash
 POLL_INTERVAL_MS=60000 SANDBOX=true TENANT_ID=sandbox-company EVENT_ID=event-sbx-001 npm run start:distribution:poll
 ```
+
+## Doc
+[Orquestrador_Distribuicao_Biometria.pdf](https://github.com/user-attachments/files/24340821/Orquestrador_Distribuicao_Biometria.pdf)
+
